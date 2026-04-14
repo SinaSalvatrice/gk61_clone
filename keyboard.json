@@ -11,7 +11,7 @@
   "usb": {
     "vid": "0xFEED",
     "pid": "0x6061",
-    "device_version": "0x0001"
+    "device_version": "0.0.1"
   },
   "layout": "gk61",
   "description": "GK61 clone, RP2040 Zero, matrix only, no RGB/encoder/oled."
