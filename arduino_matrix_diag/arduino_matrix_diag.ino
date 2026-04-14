@@ -13,7 +13,7 @@ constexpr uint8_t COL_PINS[] = {7, 8, 9, 10, 11, 12, 13, 14, 15, 26, 27, 28, 29}
 constexpr uint8_t PROBE_PINS[] = {0, 1, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25};
 
 constexpr bool USE_PCF8575_LAST_COL = true;
-constexpr bool KEYBOARD_MODE = true;
+#define KEYBOARD_MODE 1
 constexpr uint8_t PCF8575_ADDR = 0x20;
 constexpr int8_t I2C_SDA_PIN = 0;
 constexpr int8_t I2C_SCL_PIN = 1;
@@ -50,12 +50,14 @@ constexpr size_t PROBE_COUNT = sizeof(PROBE_PINS) / sizeof(PROBE_PINS[0]);
 constexpr size_t FULL_COL_COUNT = COL_COUNT + 1;
 
 bool last_row2col[ROW_COUNT][COL_COUNT] = {};
+#if !KEYBOARD_MODE
 bool last_col2row[ROW_COUNT][COL_COUNT] = {};
 bool last_probe_row2col[ROW_COUNT][PROBE_COUNT] = {};
 bool last_probe_col2row[ROW_COUNT][PROBE_COUNT] = {};
-bool last_expander_row2col[ROW_COUNT] = {};
 bool last_expander_col2row[ROW_COUNT] = {};
 bool last_expander_probe[PCF8575_PIN_COUNT][ROW_COUNT] = {};
+#endif
+bool last_expander_row2col[ROW_COUNT] = {};
 
 #if ENABLE_USB_KEYBOARD
 enum KeyKind : uint8_t {
@@ -317,6 +319,30 @@ void scan_row2col(bool matrix_state[ROW_COUNT][COL_COUNT]) {
   }
 }
 
+void scan_expander_row2col(bool column_state[ROW_COUNT]) {
+  clear_expander_column(column_state);
+
+  if (!expander_present) {
+    return;
+  }
+
+  set_all_inputs_pullup();
+  if (!pcf8575_drive_p10_low()) {
+    expander_present = false;
+    return;
+  }
+
+  delayMicroseconds(30);
+  for (size_t row = 0; row < ROW_COUNT; ++row) {
+    column_state[row] = (digitalRead(ROW_PINS[row]) == LOW);
+  }
+
+  if (!pcf8575_release_p10()) {
+    expander_present = false;
+  }
+}
+
+#if !KEYBOARD_MODE
 void scan_col2row(bool matrix_state[ROW_COUNT][COL_COUNT]) {
   clear_matrix(matrix_state);
   set_all_inputs_pullup();
@@ -365,29 +391,6 @@ void scan_probe_col2row(bool matrix_state[ROW_COUNT][PROBE_COUNT]) {
     }
 
     pinMode(ROW_PINS[row], INPUT_PULLUP);
-  }
-}
-
-void scan_expander_row2col(bool column_state[ROW_COUNT]) {
-  clear_expander_column(column_state);
-
-  if (!expander_present) {
-    return;
-  }
-
-  set_all_inputs_pullup();
-  if (!pcf8575_drive_p10_low()) {
-    expander_present = false;
-    return;
-  }
-
-  delayMicroseconds(30);
-  for (size_t row = 0; row < ROW_COUNT; ++row) {
-    column_state[row] = (digitalRead(ROW_PINS[row]) == LOW);
-  }
-
-  if (!pcf8575_release_p10()) {
-    expander_present = false;
   }
 }
 
@@ -448,14 +451,17 @@ void scan_expander_probe_row2col(bool probe_state[PCF8575_PIN_COUNT][ROW_COUNT])
     expander_present = false;
   }
 }
+#endif
 
 bool matrices_equal(const bool left[ROW_COUNT][COL_COUNT], const bool right[ROW_COUNT][COL_COUNT]) {
   return memcmp(left, right, ROW_COUNT * COL_COUNT * sizeof(bool)) == 0;
 }
 
+#if !KEYBOARD_MODE
 bool probe_matrices_equal(const bool left[ROW_COUNT][PROBE_COUNT], const bool right[ROW_COUNT][PROBE_COUNT]) {
   return memcmp(left, right, ROW_COUNT * PROBE_COUNT * sizeof(bool)) == 0;
 }
+#endif
 
 bool matrix_has_press(const bool matrix_state[ROW_COUNT][COL_COUNT]) {
   for (size_t row = 0; row < ROW_COUNT; ++row) {
@@ -469,6 +475,7 @@ bool matrix_has_press(const bool matrix_state[ROW_COUNT][COL_COUNT]) {
   return false;
 }
 
+#if !KEYBOARD_MODE
 bool probe_matrix_has_press(const bool matrix_state[ROW_COUNT][PROBE_COUNT]) {
   for (size_t row = 0; row < ROW_COUNT; ++row) {
     for (size_t probe = 0; probe < PROBE_COUNT; ++probe) {
@@ -480,6 +487,7 @@ bool probe_matrix_has_press(const bool matrix_state[ROW_COUNT][PROBE_COUNT]) {
 
   return false;
 }
+#endif
 
 bool expander_column_has_press(const bool column_state[ROW_COUNT]) {
   for (size_t row = 0; row < ROW_COUNT; ++row) {
@@ -495,9 +503,11 @@ void copy_matrix(bool dst[ROW_COUNT][COL_COUNT], const bool src[ROW_COUNT][COL_C
   memcpy(dst, src, ROW_COUNT * COL_COUNT * sizeof(bool));
 }
 
+#if !KEYBOARD_MODE
 void copy_probe_matrix(bool dst[ROW_COUNT][PROBE_COUNT], const bool src[ROW_COUNT][PROBE_COUNT]) {
   memcpy(dst, src, ROW_COUNT * PROBE_COUNT * sizeof(bool));
 }
+#endif
 
 void copy_expander_column(bool dst[ROW_COUNT], const bool src[ROW_COUNT]) {
   memcpy(dst, src, ROW_COUNT * sizeof(bool));
@@ -530,6 +540,7 @@ void print_matrix(const char *label, const bool matrix_state[ROW_COUNT][COL_COUN
   }
 }
 
+#if !KEYBOARD_MODE
 void print_probe_matrix(const char *label, const bool matrix_state[ROW_COUNT][PROBE_COUNT]) {
   Serial.print(label);
   Serial.println(":");
@@ -556,6 +567,7 @@ void print_probe_matrix(const char *label, const bool matrix_state[ROW_COUNT][PR
     Serial.println("  no probe hits detected");
   }
 }
+#endif
 
 void print_expander_column(const char *label, const bool column_state[ROW_COUNT]) {
   Serial.print(label);
@@ -640,7 +652,11 @@ void print_pin_summary() {
   }
 
 #if ENABLE_USB_KEYBOARD
-  Serial.println(KEYBOARD_MODE ? "USB keyboard mode: enabled (keyboard-first scan)" : "USB keyboard mode: enabled (diagnostic scan)");
+#if KEYBOARD_MODE
+  Serial.println("USB keyboard mode: enabled (keyboard-first scan)");
+#else
+  Serial.println("USB keyboard mode: enabled (diagnostic scan)");
+#endif
   Serial.println("Bottom row and Fn placement are a first-pass ANSI estimate.");
 #else
   Serial.println("USB keyboard mode: Keyboard.h not available in this Arduino core");
@@ -710,14 +726,14 @@ void setup() {
 
   Serial.println();
   Serial.println("RP2040 matrix diagnostic");
-  if (KEYBOARD_MODE) {
+#if KEYBOARD_MODE
     Serial.println("Keyboard mode is active.");
     Serial.println("The sketch scans the intended ROW2COL matrix and sends USB key events.");
-  } else {
+#else
     Serial.println("This sketch scans both diode directions.");
     Serial.println("Press keys and watch which mode reports coordinates.");
     Serial.println("If a missing column is wired to an unknown GPIO, check the probe output.");
-  }
+#endif
   if (USE_PCF8575_LAST_COL) {
     if (expander_present) {
       Serial.print("Detected expander at 0x");
@@ -745,37 +761,35 @@ void loop() {
   update_usb_keyboard(current_row2col, current_expander_row2col);
 #endif
 
-  if (KEYBOARD_MODE) {
-    const bool row2col_changed = !matrices_equal(current_row2col, last_row2col);
-    const bool expander_row2col_changed = memcmp(current_expander_row2col, last_expander_row2col, ROW_COUNT * sizeof(bool)) != 0;
-    const bool row2col_active = matrix_has_press(current_row2col);
-    const bool expander_row2col_active = expander_column_has_press(current_expander_row2col);
+#if KEYBOARD_MODE
+  const bool row2col_changed = !matrices_equal(current_row2col, last_row2col);
+  const bool expander_row2col_changed = memcmp(current_expander_row2col, last_expander_row2col, ROW_COUNT * sizeof(bool)) != 0;
+  const bool row2col_active = matrix_has_press(current_row2col);
+  const bool expander_row2col_active = expander_column_has_press(current_expander_row2col);
 
-    if (row2col_changed || expander_row2col_changed) {
-      Serial.println("------------------------------");
-      print_matrix("ROW2COL", current_row2col);
-      print_expander_column("EXPANDER ROW2COL", current_expander_row2col);
-      Serial.println();
-    } else if (!row2col_active && !expander_row2col_active && millis() - last_idle_report > 2000) {
-      Serial.println("idle: no keys detected in active keyboard scan");
-      last_idle_report = millis();
-    }
-
-    copy_matrix(last_row2col, current_row2col);
-    copy_expander_column(last_expander_row2col, current_expander_row2col);
-
-    #ifdef LED_BUILTIN
-    if (millis() - last_heartbeat > 500) {
-      led_state = !led_state;
-      digitalWrite(LED_BUILTIN, led_state ? HIGH : LOW);
-      last_heartbeat = millis();
-    }
-    #endif
-
-    delay(5);
-    return;
+  if (row2col_changed || expander_row2col_changed) {
+    Serial.println("------------------------------");
+    print_matrix("ROW2COL", current_row2col);
+    print_expander_column("EXPANDER ROW2COL", current_expander_row2col);
+    Serial.println();
+  } else if (!row2col_active && !expander_row2col_active && millis() - last_idle_report > 2000) {
+    Serial.println("idle: no keys detected in active keyboard scan");
+    last_idle_report = millis();
   }
 
+  copy_matrix(last_row2col, current_row2col);
+  copy_expander_column(last_expander_row2col, current_expander_row2col);
+
+  #ifdef LED_BUILTIN
+  if (millis() - last_heartbeat > 500) {
+    led_state = !led_state;
+    digitalWrite(LED_BUILTIN, led_state ? HIGH : LOW);
+    last_heartbeat = millis();
+  }
+  #endif
+
+  delay(5);
+#else
   bool current_col2row[ROW_COUNT][COL_COUNT];
   bool current_probe_row2col[ROW_COUNT][PROBE_COUNT];
   bool current_probe_col2row[ROW_COUNT][PROBE_COUNT];
@@ -801,10 +815,6 @@ void loop() {
   const bool probe_col2row_active = probe_matrix_has_press(current_probe_col2row);
   const bool expander_row2col_active = expander_column_has_press(current_expander_row2col);
   const bool expander_col2row_active = expander_column_has_press(current_expander_col2row);
-
-#if ENABLE_USB_KEYBOARD
-  update_usb_keyboard(current_row2col, current_expander_row2col);
-#endif
 
   if (row2col_changed || col2row_changed || probe_row2col_changed || probe_col2row_changed || expander_row2col_changed || expander_col2row_changed || expander_probe_changed) {
     Serial.println("------------------------------");
@@ -852,4 +862,5 @@ void loop() {
   #endif
 
   delay(25);
+#endif
 }
