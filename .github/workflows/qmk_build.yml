@@ -1,0 +1,37 @@
+name: QMK RP2040 Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: qmkfm/qmk_cli
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python (for QMK CLI)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install QMK CLI dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install qmk
+          qmk setup -y
+
+      - name: Build firmware (RP2040)
+        run: |
+          qmk compile -kb GK61_clone -km default
+
+      - name: Upload UF2 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-uf2
+          path: "qmk_firmware/.build/*.uf2"
