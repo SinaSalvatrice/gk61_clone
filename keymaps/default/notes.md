@@ -1,4 +1,4 @@
-# Default keymap for GK61_clone
+# Default keymap for gk61_clone
 
 - Matrix only, no RGB, encoder, or OLED.
 - RP2040 Zero microcontroller.

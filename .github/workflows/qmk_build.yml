@@ -1,4 +1,4 @@
-name: GK61 Clone Firmware Build
+name: gk61_clone Firmware Build
 
 on:
   workflow_dispatch:
@@ -9,8 +9,8 @@ on:
       - "config.h"
       - "keyboard.json"
       - "README.md"
-      - "GK61_clone.c"
-      - "GK61_clone.h"
+      - "gk61_clone.c"
+      - "gk61_clone.h"
       - "rules.mk"
       - "keymaps/**"
       - ".github/workflows/qmk_build.yml"
@@ -24,7 +24,7 @@ jobs:
       contents: read
 
     env:
-      KEYBOARD: GK61_clone
+      KEYBOARD: gk61_clone
       KEYMAP: default
       QMK_HOME: /tmp/qmk_firmware
 
@@ -62,8 +62,8 @@ jobs:
       - name: Upload firmware default UF2
         uses: actions/upload-artifact@v4
         with:
-          name: GK61_clone_default_uf2
-          path: artifacts/GK61_clone_default.uf2
+          name: gk61_clone_default_uf2
+          path: artifacts/gk61_clone_default.uf2
           if-no-files-found: error
           compression-level: 6
           overwrite: false

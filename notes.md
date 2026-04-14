@@ -1,4 +1,4 @@
-# GK61_clone Notes
+# gk61_clone Notes
 
 - Matrix only, no RGB, encoder, or OLED.
 - RP2040 Zero microcontroller.
