@@ -13,6 +13,7 @@ constexpr uint8_t COL_PINS[] = {7, 8, 9, 10, 11, 12, 13, 14, 15, 26, 27, 28, 29}
 constexpr uint8_t PROBE_PINS[] = {0, 1, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25};
 
 constexpr bool USE_PCF8575_LAST_COL = true;
+constexpr bool KEYBOARD_MODE = true;
 constexpr uint8_t PCF8575_ADDR = 0x20;
 constexpr int8_t I2C_SDA_PIN = 0;
 constexpr int8_t I2C_SCL_PIN = 1;
@@ -69,6 +70,7 @@ struct KeyDef {
   uint8_t code;
 };
 
+#define HID_KEY(usage) static_cast<uint8_t>((usage) + 136)
 #define NO_KEY      {KEY_KIND_NONE, 0}
 #define CHAR_KEY(c) {KEY_KIND_CHAR, static_cast<uint8_t>(c)}
 #define CODE_KEY(c) {KEY_KIND_CODE, static_cast<uint8_t>(c)}
@@ -82,11 +84,11 @@ constexpr size_t FN_ROW = 4;
 constexpr size_t FN_COL = 10;
 
 const KeyDef BASE_LAYER[ROW_COUNT][FULL_COL_COUNT] = {
-  {CODE_KEY(KEY_ESC), CHAR_KEY('1'), CHAR_KEY('2'), CHAR_KEY('3'), CHAR_KEY('4'), CHAR_KEY('5'), CHAR_KEY('6'), CHAR_KEY('7'), CHAR_KEY('8'), CHAR_KEY('9'), CHAR_KEY('0'), CHAR_KEY('-'), CHAR_KEY('='), CODE_KEY(KEY_BACKSPACE)},
-  {CODE_KEY(KEY_TAB), CHAR_KEY('q'), CHAR_KEY('w'), CHAR_KEY('e'), CHAR_KEY('r'), CHAR_KEY('t'), CHAR_KEY('y'), CHAR_KEY('u'), CHAR_KEY('i'), CHAR_KEY('o'), CHAR_KEY('p'), CHAR_KEY('['), CHAR_KEY(']'), CHAR_KEY('\\')},
-  {CODE_KEY(KEY_CAPS_LOCK), CHAR_KEY('a'), CHAR_KEY('s'), CHAR_KEY('d'), CHAR_KEY('f'), CHAR_KEY('g'), CHAR_KEY('h'), CHAR_KEY('j'), CHAR_KEY('k'), CHAR_KEY('l'), CHAR_KEY(';'), CHAR_KEY('\''), CODE_KEY(KEY_RETURN), NO_KEY},
-  {CODE_KEY(KEY_LEFT_SHIFT), CHAR_KEY('z'), CHAR_KEY('x'), CHAR_KEY('c'), CHAR_KEY('v'), CHAR_KEY('b'), CHAR_KEY('n'), CHAR_KEY('m'), CHAR_KEY(','), CHAR_KEY('.'), CHAR_KEY('/'), NO_KEY, NO_KEY, CODE_KEY(KEY_RIGHT_SHIFT)},
-  {CODE_KEY(KEY_LEFT_CTRL), CODE_KEY(KEY_LEFT_GUI), CODE_KEY(KEY_LEFT_ALT), NO_KEY, NO_KEY, CHAR_KEY(' '), NO_KEY, NO_KEY, NO_KEY, CODE_KEY(KEY_RIGHT_ALT), FN_KEY, CODE_KEY(KEY_MENU), NO_KEY, CODE_KEY(KEY_RIGHT_CTRL)},
+  {CODE_KEY(KEY_ESC), CODE_KEY(HID_KEY(0x1E)), CODE_KEY(HID_KEY(0x1F)), CODE_KEY(HID_KEY(0x20)), CODE_KEY(HID_KEY(0x21)), CODE_KEY(HID_KEY(0x22)), CODE_KEY(HID_KEY(0x23)), CODE_KEY(HID_KEY(0x24)), CODE_KEY(HID_KEY(0x25)), CODE_KEY(HID_KEY(0x26)), CODE_KEY(HID_KEY(0x27)), CODE_KEY(HID_KEY(0x2D)), CODE_KEY(HID_KEY(0x2E)), CODE_KEY(KEY_BACKSPACE)},
+  {CODE_KEY(KEY_TAB), CODE_KEY(HID_KEY(0x14)), CODE_KEY(HID_KEY(0x1A)), CODE_KEY(HID_KEY(0x08)), CODE_KEY(HID_KEY(0x15)), CODE_KEY(HID_KEY(0x17)), CODE_KEY(HID_KEY(0x1C)), CODE_KEY(HID_KEY(0x18)), CODE_KEY(HID_KEY(0x0C)), CODE_KEY(HID_KEY(0x12)), CODE_KEY(HID_KEY(0x13)), CODE_KEY(HID_KEY(0x2F)), CODE_KEY(HID_KEY(0x30)), CODE_KEY(HID_KEY(0x31))},
+  {CODE_KEY(KEY_CAPS_LOCK), CODE_KEY(HID_KEY(0x04)), CODE_KEY(HID_KEY(0x16)), CODE_KEY(HID_KEY(0x07)), CODE_KEY(HID_KEY(0x09)), CODE_KEY(HID_KEY(0x0A)), CODE_KEY(HID_KEY(0x0B)), CODE_KEY(HID_KEY(0x0D)), CODE_KEY(HID_KEY(0x0E)), CODE_KEY(HID_KEY(0x0F)), CODE_KEY(HID_KEY(0x33)), CODE_KEY(HID_KEY(0x34)), CODE_KEY(KEY_RETURN), NO_KEY},
+  {CODE_KEY(KEY_LEFT_SHIFT), CODE_KEY(HID_KEY(0x1D)), CODE_KEY(HID_KEY(0x1B)), CODE_KEY(HID_KEY(0x06)), CODE_KEY(HID_KEY(0x19)), CODE_KEY(HID_KEY(0x05)), CODE_KEY(HID_KEY(0x11)), CODE_KEY(HID_KEY(0x10)), CODE_KEY(HID_KEY(0x36)), CODE_KEY(HID_KEY(0x37)), CODE_KEY(HID_KEY(0x38)), NO_KEY, NO_KEY, CODE_KEY(KEY_RIGHT_SHIFT)},
+  {CODE_KEY(KEY_LEFT_CTRL), CODE_KEY(KEY_LEFT_GUI), CODE_KEY(KEY_LEFT_ALT), NO_KEY, NO_KEY, CODE_KEY(HID_KEY(0x2C)), NO_KEY, NO_KEY, NO_KEY, CODE_KEY(KEY_RIGHT_ALT), FN_KEY, CODE_KEY(KEY_MENU), NO_KEY, CODE_KEY(KEY_RIGHT_CTRL)},
 };
 
 const KeyDef FN_LAYER[ROW_COUNT][FULL_COL_COUNT] = {
@@ -638,12 +640,44 @@ void print_pin_summary() {
   }
 
 #if ENABLE_USB_KEYBOARD
-  Serial.println("USB keyboard mode: enabled");
+  Serial.println(KEYBOARD_MODE ? "USB keyboard mode: enabled (keyboard-first scan)" : "USB keyboard mode: enabled (diagnostic scan)");
   Serial.println("Bottom row and Fn placement are a first-pass ANSI estimate.");
 #else
   Serial.println("USB keyboard mode: Keyboard.h not available in this Arduino core");
 #endif
 }
+
+#if ENABLE_USB_KEYBOARD
+void update_usb_keyboard(const bool gpio_matrix[ROW_COUNT][COL_COUNT], const bool expander_state[ROW_COUNT]) {
+  bool current_usb_matrix[ROW_COUNT][FULL_COL_COUNT];
+  build_usb_matrix(current_usb_matrix, gpio_matrix, expander_state);
+
+  const bool fn_active = current_usb_matrix[FN_ROW][FN_COL];
+  if (fn_active != last_fn_active) {
+    rebuild_keyboard_report(current_usb_matrix, fn_active);
+  } else {
+    for (size_t row = 0; row < ROW_COUNT; ++row) {
+      for (size_t col = 0; col < FULL_COL_COUNT; ++col) {
+        if (row == FN_ROW && col == FN_COL) {
+          continue;
+        }
+
+        const KeyDef &active_key = get_keydef(fn_active, row, col);
+        const KeyDef &previous_key = get_keydef(last_fn_active, row, col);
+
+        if (current_usb_matrix[row][col] && !last_usb_matrix[row][col]) {
+          press_keydef(active_key);
+        } else if (!current_usb_matrix[row][col] && last_usb_matrix[row][col]) {
+          release_keydef(previous_key);
+        }
+      }
+    }
+  }
+
+  memcpy(last_usb_matrix, current_usb_matrix, sizeof(last_usb_matrix));
+  last_fn_active = fn_active;
+}
+#endif
 
 void setup() {
   #ifdef LED_BUILTIN
@@ -676,9 +710,14 @@ void setup() {
 
   Serial.println();
   Serial.println("RP2040 matrix diagnostic");
-  Serial.println("This sketch scans both diode directions.");
-  Serial.println("Press keys and watch which mode reports coordinates.");
-  Serial.println("If a missing column is wired to an unknown GPIO, check the probe output.");
+  if (KEYBOARD_MODE) {
+    Serial.println("Keyboard mode is active.");
+    Serial.println("The sketch scans the intended ROW2COL matrix and sends USB key events.");
+  } else {
+    Serial.println("This sketch scans both diode directions.");
+    Serial.println("Press keys and watch which mode reports coordinates.");
+    Serial.println("If a missing column is wired to an unknown GPIO, check the probe output.");
+  }
   if (USE_PCF8575_LAST_COL) {
     if (expander_present) {
       Serial.print("Detected expander at 0x");
@@ -697,18 +736,55 @@ void setup() {
 
 void loop() {
   bool current_row2col[ROW_COUNT][COL_COUNT];
+  bool current_expander_row2col[ROW_COUNT];
+
+  scan_row2col(current_row2col);
+  scan_expander_row2col(current_expander_row2col);
+
+#if ENABLE_USB_KEYBOARD
+  update_usb_keyboard(current_row2col, current_expander_row2col);
+#endif
+
+  if (KEYBOARD_MODE) {
+    const bool row2col_changed = !matrices_equal(current_row2col, last_row2col);
+    const bool expander_row2col_changed = memcmp(current_expander_row2col, last_expander_row2col, ROW_COUNT * sizeof(bool)) != 0;
+    const bool row2col_active = matrix_has_press(current_row2col);
+    const bool expander_row2col_active = expander_column_has_press(current_expander_row2col);
+
+    if (row2col_changed || expander_row2col_changed) {
+      Serial.println("------------------------------");
+      print_matrix("ROW2COL", current_row2col);
+      print_expander_column("EXPANDER ROW2COL", current_expander_row2col);
+      Serial.println();
+    } else if (!row2col_active && !expander_row2col_active && millis() - last_idle_report > 2000) {
+      Serial.println("idle: no keys detected in active keyboard scan");
+      last_idle_report = millis();
+    }
+
+    copy_matrix(last_row2col, current_row2col);
+    copy_expander_column(last_expander_row2col, current_expander_row2col);
+
+    #ifdef LED_BUILTIN
+    if (millis() - last_heartbeat > 500) {
+      led_state = !led_state;
+      digitalWrite(LED_BUILTIN, led_state ? HIGH : LOW);
+      last_heartbeat = millis();
+    }
+    #endif
+
+    delay(5);
+    return;
+  }
+
   bool current_col2row[ROW_COUNT][COL_COUNT];
   bool current_probe_row2col[ROW_COUNT][PROBE_COUNT];
   bool current_probe_col2row[ROW_COUNT][PROBE_COUNT];
-  bool current_expander_row2col[ROW_COUNT];
   bool current_expander_col2row[ROW_COUNT];
   bool current_expander_probe[PCF8575_PIN_COUNT][ROW_COUNT];
 
-  scan_row2col(current_row2col);
   scan_col2row(current_col2row);
   scan_probe_row2col(current_probe_row2col);
   scan_probe_col2row(current_probe_col2row);
-  scan_expander_row2col(current_expander_row2col);
   scan_expander_col2row(current_expander_col2row);
   scan_expander_probe_row2col(current_expander_probe);
 
@@ -727,33 +803,7 @@ void loop() {
   const bool expander_col2row_active = expander_column_has_press(current_expander_col2row);
 
 #if ENABLE_USB_KEYBOARD
-  bool current_usb_matrix[ROW_COUNT][FULL_COL_COUNT];
-  build_usb_matrix(current_usb_matrix, current_row2col, current_expander_row2col);
-
-  const bool fn_active = current_usb_matrix[FN_ROW][FN_COL];
-  if (fn_active != last_fn_active) {
-    rebuild_keyboard_report(current_usb_matrix, fn_active);
-  } else {
-    for (size_t row = 0; row < ROW_COUNT; ++row) {
-      for (size_t col = 0; col < FULL_COL_COUNT; ++col) {
-        if (row == FN_ROW && col == FN_COL) {
-          continue;
-        }
-
-        const KeyDef &active_key = get_keydef(fn_active, row, col);
-        const KeyDef &previous_key = get_keydef(last_fn_active, row, col);
-
-        if (current_usb_matrix[row][col] && !last_usb_matrix[row][col]) {
-          press_keydef(active_key);
-        } else if (!current_usb_matrix[row][col] && last_usb_matrix[row][col]) {
-          release_keydef(previous_key);
-        }
-      }
-    }
-  }
-
-  memcpy(last_usb_matrix, current_usb_matrix, sizeof(last_usb_matrix));
-  last_fn_active = fn_active;
+  update_usb_keyboard(current_row2col, current_expander_row2col);
 #endif
 
   if (row2col_changed || col2row_changed || probe_row2col_changed || probe_col2row_changed || expander_row2col_changed || expander_col2row_changed || expander_probe_changed) {
