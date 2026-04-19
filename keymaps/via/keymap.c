@@ -3,16 +3,19 @@
 enum layer_names {
     _BASE,
     _FN,
+    _RGB,
 };
 
 #define FN MO(_FN)
 #define CAD C(A(KC_DEL))
 
+#define RGB MO(_RGB)
+
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_BASE] = LAYOUT_60_ansi(
         KC_ESC,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC,
         KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS,
-        KC_CAPS, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT,          KC_ENT,
+        KC_CAPS, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT, KC_ENT,  _______,
         KC_LSFT,          KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_RSFT, KC_SLSH,
         KC_LCTL, KC_LGUI, KC_LALT,                            KC_SPC,                             KC_RALT, FN,      KC_RCTL, KC_APP
     ),
@@ -22,6 +25,14 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         _______, _______, KC_UP,   _______, _______, _______, _______, _______, _______, RM_TOGG, RM_NEXT, RM_PREV, _______, _______,
         _______, KC_LEFT, KC_DOWN, KC_RGHT, _______, _______, _______, _______, _______, RM_HUEU, RM_SATU, RM_VALU,          _______,
         _______,          _______, _______, _______, _______, _______, _______, _______, RM_HUED, RM_SATD, RM_VALD,          _______,
-        _______, _______, _______,                            QK_LOCK,                            _______, _______, _______, CAD
+        _______, _______, _______,                            QK_LOCK,                            RGB,     _______, _______, CAD
+    )
+    ,
+    [_RGB] = LAYOUT_60_ansi(
+        _______, RGB_TOG, RGB_MOD, RGB_RMOD, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
+        _______, RGB_HUI, RGB_SAI, RGB_VAI,  _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
+        _______, RGB_HUD, RGB_SAD, RGB_VAD,  _______, _______, _______, _______, _______, _______, _______, _______,          _______,
+        _______,          _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          _______,
+        _______, _______, _______,                            _______,                            _______, _______, _______, _______
     )
 };
