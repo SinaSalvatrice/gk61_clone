@@ -1,6 +1,6 @@
 # Default keymap for gk61_clone
 
-- Matrix only, no RGB, encoder, or OLED.
+- Matrix with WS2812 RGB on GP29 (36 LEDs), no encoder or OLED.
 - RP2040 Zero microcontroller.
 - Matrix rows: 0, 1, 2, 3, 4
 - Matrix columns: 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 26, 27, 28
