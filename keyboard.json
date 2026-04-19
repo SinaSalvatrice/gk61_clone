@@ -4,7 +4,7 @@
   "maintainer": "SinaSalvatrice",
   "bootloader": "rp2040",
   "processor": "RP2040",
-  "diode_direction": "ROW2COL",
+  "diode_direction": "COL2ROW",
 
   "matrix_pins": {
     "rows": ["GP0", "GP1", "GP2", "GP3", "GP4"],

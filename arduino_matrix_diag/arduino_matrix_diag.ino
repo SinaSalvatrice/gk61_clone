@@ -6,11 +6,28 @@
 #define ENABLE_USB_KEYBOARD 0
 #endif
 
+#define RGB_TEST_ENABLE 1
+
+#if RGB_TEST_ENABLE && __has_include(<Adafruit_NeoPixel.h>)
+#include <Adafruit_NeoPixel.h>
+#define ENABLE_RGB_TEST 1
+#else
+#define ENABLE_RGB_TEST 0
+#endif
+
 constexpr uint8_t ROW_PINS[] = {0, 1, 2, 3, 4};
 constexpr uint8_t COL_PINS[] = {5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 26, 27, 28};
+#if RGB_TEST_ENABLE
+constexpr uint8_t PROBE_PINS[] = {16, 17, 18, 19, 20, 21, 22, 23, 24, 25};
+#else
 constexpr uint8_t PROBE_PINS[] = {16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 29};
+#endif
+
+constexpr uint8_t RGB_TEST_PIN = 29;
+constexpr uint16_t RGB_TEST_LED_COUNT = 36;
 
 #define KEYBOARD_MODE 1
+#define MATRIX_DIRECTION_COL2ROW 1
 
 constexpr size_t ROW_COUNT = sizeof(ROW_PINS) / sizeof(ROW_PINS[0]);
 constexpr size_t COL_COUNT = sizeof(COL_PINS) / sizeof(COL_PINS[0]);
@@ -252,6 +269,70 @@ unsigned long last_idle_report = 0;
 unsigned long last_heartbeat = 0;
 bool led_state = false;
 
+#if ENABLE_RGB_TEST
+Adafruit_NeoPixel rgb_pixels(RGB_TEST_LED_COUNT, RGB_TEST_PIN, NEO_GRB + NEO_KHZ800);
+unsigned long last_rgb_update = 0;
+uint8_t rgb_test_phase = 0;
+uint16_t rgb_test_pixel = 0;
+
+void fill_rgb(uint8_t red, uint8_t green, uint8_t blue) {
+  for (uint16_t pixel = 0; pixel < RGB_TEST_LED_COUNT; ++pixel) {
+    rgb_pixels.setPixelColor(pixel, rgb_pixels.Color(red, green, blue));
+  }
+  rgb_pixels.show();
+}
+
+void init_rgb_test() {
+  rgb_pixels.begin();
+  rgb_pixels.clear();
+  rgb_pixels.setBrightness(32);
+  rgb_pixels.show();
+
+  fill_rgb(32, 0, 0);
+  delay(250);
+  fill_rgb(0, 32, 0);
+  delay(250);
+  fill_rgb(0, 0, 32);
+  delay(250);
+  rgb_pixels.clear();
+  rgb_pixels.show();
+}
+
+void update_rgb_test() {
+  if (millis() - last_rgb_update < 120) {
+    return;
+  }
+
+  last_rgb_update = millis();
+  rgb_pixels.clear();
+
+  uint32_t color = 0;
+  switch (rgb_test_phase) {
+    case 0:
+      color = rgb_pixels.Color(32, 0, 0);
+      break;
+    case 1:
+      color = rgb_pixels.Color(0, 32, 0);
+      break;
+    case 2:
+      color = rgb_pixels.Color(0, 0, 32);
+      break;
+    default:
+      color = rgb_pixels.Color(24, 24, 24);
+      break;
+  }
+
+  rgb_pixels.setPixelColor(rgb_test_pixel, color);
+  rgb_pixels.show();
+
+  ++rgb_test_pixel;
+  if (rgb_test_pixel >= RGB_TEST_LED_COUNT) {
+    rgb_test_pixel = 0;
+    rgb_test_phase = (rgb_test_phase + 1) % 4;
+  }
+}
+#endif
+
 void set_all_inputs_pullup() {
   for (size_t row = 0; row < ROW_COUNT; ++row) {
     pinMode(ROW_PINS[row], INPUT_PULLUP);
@@ -287,7 +368,6 @@ void scan_row2col(bool matrix_state[ROW_COUNT][COL_COUNT]) {
   }
 }
 
-#if !KEYBOARD_MODE
 void scan_col2row(bool matrix_state[ROW_COUNT][COL_COUNT]) {
   clear_matrix(matrix_state);
   set_all_inputs_pullup();
@@ -305,6 +385,25 @@ void scan_col2row(bool matrix_state[ROW_COUNT][COL_COUNT]) {
   }
 }
 
+#if MATRIX_DIRECTION_COL2ROW
+void scan_active_direction(bool matrix_state[ROW_COUNT][COL_COUNT]) {
+  scan_col2row(matrix_state);
+}
+
+const char *active_direction_label() {
+  return "COL2ROW";
+}
+#else
+void scan_active_direction(bool matrix_state[ROW_COUNT][COL_COUNT]) {
+  scan_row2col(matrix_state);
+}
+
+const char *active_direction_label() {
+  return "ROW2COL";
+}
+#endif
+
+#if !KEYBOARD_MODE
 void scan_probe_row2col(bool matrix_state[ROW_COUNT][PROBE_COUNT]) {
   clear_probe_matrix(matrix_state);
   set_all_inputs_pullup();
@@ -518,6 +617,10 @@ void setup() {
   digitalWrite(LED_BUILTIN, LOW);
   #endif
 
+#if ENABLE_RGB_TEST
+  init_rgb_test();
+#endif
+
   set_all_inputs_pullup();
 
 #if ENABLE_USB_KEYBOARD
@@ -533,39 +636,55 @@ void setup() {
   Serial.println("RP2040 matrix diagnostic");
 #if KEYBOARD_MODE
     Serial.println("Keyboard mode is active.");
-    Serial.println("The sketch scans the intended ROW2COL matrix and sends USB key events.");
+  Serial.print("The sketch scans the intended ");
+  Serial.print(active_direction_label());
+  Serial.println(" matrix and sends USB key events.");
 #else
     Serial.println("This sketch scans both diode directions.");
     Serial.println("Press keys and watch which mode reports coordinates.");
     Serial.println("If a missing column is wired to an unknown GPIO, check the probe output.");
 #endif
   print_pin_summary();
+#if ENABLE_RGB_TEST
+  Serial.print("RGB test: enabled on GP");
+  Serial.print(RGB_TEST_PIN);
+  Serial.print(" for ");
+  Serial.print(RGB_TEST_LED_COUNT);
+  Serial.println(" WS2812 LEDs");
+  Serial.println("Power the LED strip from 5V with shared ground; 3.3V is not enough for a 36-pixel strip.");
+#elif RGB_TEST_ENABLE
+  Serial.println("RGB test: Adafruit_NeoPixel library not found, so GP29 LED test is disabled.");
+#endif
   Serial.println();
 }
 
 void loop() {
-  bool current_row2col[ROW_COUNT][COL_COUNT];
+#if ENABLE_RGB_TEST
+  update_rgb_test();
+#endif
 
-  scan_row2col(current_row2col);
+  bool current_matrix[ROW_COUNT][COL_COUNT];
+
+  scan_active_direction(current_matrix);
 
 #if ENABLE_USB_KEYBOARD
-  update_usb_keyboard(current_row2col);
+  update_usb_keyboard(current_matrix);
 #endif
 
 #if KEYBOARD_MODE
-  const bool row2col_changed = !matrices_equal(current_row2col, last_row2col);
-  const bool row2col_active = matrix_has_press(current_row2col);
+  const bool matrix_changed = !matrices_equal(current_matrix, last_row2col);
+  const bool matrix_active = matrix_has_press(current_matrix);
 
-  if (row2col_changed) {
+  if (matrix_changed) {
     Serial.println("------------------------------");
-    print_matrix("ROW2COL", current_row2col);
+    print_matrix(active_direction_label(), current_matrix);
     Serial.println();
-  } else if (!row2col_active && millis() - last_idle_report > 2000) {
+  } else if (!matrix_active && millis() - last_idle_report > 2000) {
     Serial.println("idle: no keys detected in active keyboard scan");
     last_idle_report = millis();
   }
 
-  copy_matrix(last_row2col, current_row2col);
+  copy_matrix(last_row2col, current_matrix);
 
   #ifdef LED_BUILTIN
   if (millis() - last_heartbeat > 500) {
