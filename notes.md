@@ -9,3 +9,6 @@
 - Layout matches GK61 (see reference image for mapping).
 - RGB Matrix is enabled in rules.mk with keypress-reactive effects.
 - Build output: UF2 file for RP2040 bootloader.
+
+## dead esc
+- ESC key sends no output
