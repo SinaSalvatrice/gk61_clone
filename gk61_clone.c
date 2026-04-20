@@ -1,7 +1,3 @@
-
-#ifndef NO_LED
-#define NO_LED 255
-#endif
 #include "keyboard.h"
 
 led_config_t g_led_config = {
