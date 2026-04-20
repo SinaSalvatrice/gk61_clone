@@ -9,5 +9,4 @@
 // Enable all standard RGB Matrix effects for VIA
 #define RGB_MATRIX_EFFECTS
 
-#define VIA_ENABLE
 #endif // CONFIG_H
