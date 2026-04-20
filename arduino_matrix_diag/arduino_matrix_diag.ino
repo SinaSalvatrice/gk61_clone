@@ -41,12 +41,14 @@ bool last_probe_row2col[ROW_COUNT][PROBE_COUNT] = {};
 bool last_probe_col2row[ROW_COUNT][PROBE_COUNT] = {};
 #endif
 
+
 #if ENABLE_USB_KEYBOARD
 enum KeyKind : uint8_t {
   KEY_KIND_NONE,
   KEY_KIND_CHAR,
   KEY_KIND_CODE,
   KEY_KIND_FN,
+  KEY_KIND_CTRL_L, // Special: Ctrl+L
 };
 
 struct KeyDef {
@@ -59,6 +61,7 @@ struct KeyDef {
 #define CHAR_KEY(c) {KEY_KIND_CHAR, static_cast<uint8_t>(c)}
 #define CODE_KEY(c) {KEY_KIND_CODE, static_cast<uint8_t>(c)}
 #define FN_KEY      {KEY_KIND_FN, 0}
+#define CTRL_L_KEY  {KEY_KIND_CTRL_L, 0}
 
 #ifndef KEY_LEFT_CTRL
 #define KEY_LEFT_CTRL 128
@@ -187,7 +190,7 @@ const KeyDef BASE_LAYER[ROW_COUNT][FULL_COL_COUNT] = {
   {CODE_KEY(KEY_TAB), CODE_KEY(HID_KEY(0x14)), CODE_KEY(HID_KEY(0x1A)), CODE_KEY(HID_KEY(0x08)), CODE_KEY(HID_KEY(0x15)), CODE_KEY(HID_KEY(0x17)), CODE_KEY(HID_KEY(0x1C)), CODE_KEY(HID_KEY(0x18)), CODE_KEY(HID_KEY(0x0C)), CODE_KEY(HID_KEY(0x12)), CODE_KEY(HID_KEY(0x13)), CODE_KEY(HID_KEY(0x2F)), CODE_KEY(HID_KEY(0x30)), CODE_KEY(HID_KEY(0x31))},
   {CODE_KEY(KEY_CAPS_LOCK), CODE_KEY(HID_KEY(0x04)), CODE_KEY(HID_KEY(0x16)), CODE_KEY(HID_KEY(0x07)), CODE_KEY(HID_KEY(0x09)), CODE_KEY(HID_KEY(0x0A)), CODE_KEY(HID_KEY(0x0B)), CODE_KEY(HID_KEY(0x0D)), CODE_KEY(HID_KEY(0x0E)), CODE_KEY(HID_KEY(0x0F)), CODE_KEY(HID_KEY(0x33)), CODE_KEY(HID_KEY(0x34)), CODE_KEY(KEY_RETURN), NO_KEY},
   {CODE_KEY(KEY_LEFT_SHIFT), CODE_KEY(HID_KEY(0x1D)), CODE_KEY(HID_KEY(0x1B)), CODE_KEY(HID_KEY(0x06)), CODE_KEY(HID_KEY(0x19)), CODE_KEY(HID_KEY(0x05)), CODE_KEY(HID_KEY(0x11)), CODE_KEY(HID_KEY(0x10)), CODE_KEY(HID_KEY(0x36)), CODE_KEY(HID_KEY(0x37)), CODE_KEY(HID_KEY(0x38)), NO_KEY, NO_KEY, CODE_KEY(KEY_RIGHT_SHIFT)},
-  {CODE_KEY(KEY_LEFT_CTRL), CODE_KEY(KEY_LEFT_GUI), CODE_KEY(KEY_LEFT_ALT), NO_KEY, NO_KEY, CODE_KEY(HID_KEY(0x2C)), NO_KEY, NO_KEY, NO_KEY, CODE_KEY(KEY_RIGHT_ALT), FN_KEY, CODE_KEY(KEY_MENU), NO_KEY, CODE_KEY(KEY_RIGHT_CTRL)},
+  {CODE_KEY(KEY_LEFT_CTRL), CODE_KEY(KEY_LEFT_GUI), CODE_KEY(KEY_LEFT_ALT), NO_KEY, NO_KEY, CODE_KEY(HID_KEY(0x2C)), NO_KEY, NO_KEY, NO_KEY, CODE_KEY(KEY_RIGHT_ALT), FN_KEY, CODE_KEY(KEY_MENU), CTRL_L_KEY, CODE_KEY(KEY_RIGHT_CTRL)},
 };
 
 const KeyDef FN_LAYER[ROW_COUNT][FULL_COL_COUNT] = {
@@ -209,6 +212,7 @@ const KeyDef &get_keydef(bool fn_active, size_t row, size_t col) {
   return fn_active ? FN_LAYER[row][col] : BASE_LAYER[row][col];
 }
 
+
 void press_keydef(const KeyDef &key) {
   switch (key.kind) {
     case KEY_KIND_CHAR:
@@ -218,6 +222,10 @@ void press_keydef(const KeyDef &key) {
       if (key.code != 0) {
         Keyboard.press(key.code);
       }
+      break;
+    case KEY_KIND_CTRL_L:
+      Keyboard.press(KEY_LEFT_CTRL);
+      Keyboard.press('l');
       break;
     default:
       break;
@@ -233,6 +241,10 @@ void release_keydef(const KeyDef &key) {
       if (key.code != 0) {
         Keyboard.release(key.code);
       }
+      break;
+    case KEY_KIND_CTRL_L:
+      Keyboard.release('l');
+      Keyboard.release(KEY_LEFT_CTRL);
       break;
     default:
       break;
@@ -269,11 +281,14 @@ unsigned long last_idle_report = 0;
 unsigned long last_heartbeat = 0;
 bool led_state = false;
 
+
 #if ENABLE_RGB_TEST
 Adafruit_NeoPixel rgb_pixels(RGB_TEST_LED_COUNT, RGB_TEST_PIN, NEO_GRB + NEO_KHZ800);
 unsigned long last_rgb_update = 0;
 uint8_t rgb_test_phase = 0;
 uint16_t rgb_test_pixel = 0;
+bool rgb_reactive = false;
+unsigned long rgb_reactive_time = 0;
 
 void fill_rgb(uint8_t red, uint8_t green, uint8_t blue) {
   for (uint16_t pixel = 0; pixel < RGB_TEST_LED_COUNT; ++pixel) {
@@ -298,7 +313,24 @@ void init_rgb_test() {
   rgb_pixels.show();
 }
 
+void trigger_rgb_reactive() {
+  rgb_reactive = true;
+  rgb_reactive_time = millis();
+  fill_rgb(64, 64, 64); // flash white
+}
+
 void update_rgb_test() {
+  if (rgb_reactive) {
+    if (millis() - rgb_reactive_time > 80) {
+      rgb_reactive = false;
+      // Resume idle animation
+      rgb_test_phase = (rgb_test_phase + 1) % 4;
+      rgb_test_pixel = 0;
+    } else {
+      return; // keep white for a short time
+    }
+  }
+
   if (millis() - last_rgb_update < 120) {
     return;
   }
@@ -579,14 +611,17 @@ void print_pin_summary() {
 #endif
 }
 
+
 #if ENABLE_USB_KEYBOARD
 void update_usb_keyboard(const bool gpio_matrix[ROW_COUNT][COL_COUNT]) {
   bool current_usb_matrix[ROW_COUNT][FULL_COL_COUNT];
   build_usb_matrix(current_usb_matrix, gpio_matrix);
 
   const bool fn_active = current_usb_matrix[FN_ROW][FN_COL];
+  bool key_pressed = false;
   if (fn_active != last_fn_active) {
     rebuild_keyboard_report(current_usb_matrix, fn_active);
+    key_pressed = true;
   } else {
     for (size_t row = 0; row < ROW_COUNT; ++row) {
       for (size_t col = 0; col < FULL_COL_COUNT; ++col) {
@@ -599,12 +634,19 @@ void update_usb_keyboard(const bool gpio_matrix[ROW_COUNT][COL_COUNT]) {
 
         if (current_usb_matrix[row][col] && !last_usb_matrix[row][col]) {
           press_keydef(active_key);
+          key_pressed = true;
         } else if (!current_usb_matrix[row][col] && last_usb_matrix[row][col]) {
           release_keydef(previous_key);
         }
       }
     }
   }
+
+#if ENABLE_RGB_TEST
+  if (key_pressed) {
+    trigger_rgb_reactive();
+  }
+#endif
 
   memcpy(last_usb_matrix, current_usb_matrix, sizeof(last_usb_matrix));
   last_fn_active = fn_active;
