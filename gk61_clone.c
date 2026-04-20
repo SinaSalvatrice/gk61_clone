@@ -1,4 +1,4 @@
-#include "keyboard.h"
+#include "gk61_clone.h"
 
 led_config_t g_led_config = {
 	{
