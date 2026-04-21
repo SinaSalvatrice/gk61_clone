@@ -1,16 +1,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-// WS2812 RGB Light
-#define WS2812_DI_PIN GP29
-#define RGBLIGHT_LED_COUNT 36
-#define RGBLIGHT_HUE_STEP 8
-#define RGBLIGHT_SAT_STEP 8
-#define RGBLIGHT_VAL_STEP 8
-#define RGBLIGHT_LIMIT_VAL 200
-#define RGBLIGHT_SLEEP
-#define RGBLIGHT_ANIMATIONS
-
 // Matrix pinout to match arduino_matrix_diag.ino
 #define MATRIX_ROWS 5
 #define MATRIX_COLS 14
