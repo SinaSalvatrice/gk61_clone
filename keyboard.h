@@ -1,4 +1,3 @@
-#define LAYOUT LAYOUT_5x14
 #pragma once
 
 #include "quantum.h"
