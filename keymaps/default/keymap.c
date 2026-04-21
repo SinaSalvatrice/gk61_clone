@@ -7,12 +7,10 @@
 enum layer_names {
     _BASE,
     _FN,
-    _RGB,
 };
 
 #define FN MO(_FN)
 #define CAD C(A(KC_DEL))
-#define RGB MO(_RGB)
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_BASE] = LAYOUT_5x14(
@@ -29,31 +27,6 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         /* Row 2 */ KC_NO,   KC_LEFT, KC_DOWN, KC_RGHT, KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_INS,  KC_HOME, KC_PGUP, KC_ENT,
         /* Row 3 */ KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_DEL,  KC_END,  KC_NO,
         /* Row 4 */ KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   MO(_FN), KC_NO
-    ),
-
-    [_RGB] = LAYOUT_5x14(
-        /* Row 0 */ _______, RM_TOGG, RM_NEXT, RM_PREV, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
-        /* Row 1 */ _______, RM_HUEU, RM_SATU, RM_VALU,  _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
-        /* Row 2 */ _______, RM_HUED, RM_SATD, RM_VALD,  _______, _______, _______, _______, _______, _______, _______, _______, _______,
-        /* Row 3 */ _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
-        /* Row 4 */ _______, _______, _______, _______, _______, _______, _______, _______
-    )
-};
-
-    [_FN] = LAYOUT_60_custom(
-        KC_ESC,  KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,  KC_DEL,
-        KC_NO,   KC_NO,   KC_UP,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_PSCR, KC_SLCK, KC_PAUS, KC_NO,   KC_NO,
-        KC_NO,   KC_LEFT, KC_DOWN, KC_RGHT, KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_INS,  KC_HOME, KC_PGUP, KC_ENT,  KC_NO,
-        KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_DEL,  KC_END,  KC_NO,   KC_NO,   KC_PGDN,
-        KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   MO(_FN), KC_NO,   KC_NO,   KC_NO
-    ),
-
-    [_RGB] = LAYOUT_60_custom(
-        _______, RM_TOGG, RM_NEXT, RM_PREV, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
-        _______, RM_HUEU, RM_SATU, RM_VALU,  _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
-        _______, RM_HUED, RM_SATD, RM_VALD,  _______, _______, _______, _______, _______, _______, _______, _______, _______,
-        _______,           _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
-        _______, _______, _______,                   _______,                            _______, _______, _______, _______
     )
 };
 

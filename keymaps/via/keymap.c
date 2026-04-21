@@ -4,12 +4,10 @@
 enum layer_names {
   _BASE,
   _FN,
-  _RGB,
 };
 
 #define FN MO(_FN)
 #define CAD C(A(KC_DEL))
-#define RGB MO(_RGB)
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_BASE] = LAYOUT_5x14(
@@ -26,14 +24,6 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         /* Row 2 */ KC_TRNS, KC_LEFT, KC_DOWN, KC_RGHT, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_INS,  KC_HOME, KC_PGUP, KC_ENT,
         /* Row 3 */ KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_DEL,  KC_END,  KC_TRNS,
         /* Row 4 */ KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, MO(_FN), KC_TRNS
-    ),
-
-    [_RGB] = LAYOUT_5x14(
-        /* Row 0 */ _______, RM_TOGG, RM_NEXT, RM_PREV, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
-        /* Row 1 */ _______, RM_HUEU, RM_SATU, RM_VALU,  _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
-        /* Row 2 */ _______, RM_HUED, RM_SATD, RM_VALD,  _______, _______, _______, _______, _______, _______, _______, _______, _______,
-        /* Row 3 */ _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
-        /* Row 4 */ _______, _______, _______, _______, _______, _______, _______, _______
     )
 };
 
